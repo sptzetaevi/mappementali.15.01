@@ -149,7 +149,7 @@
       border:0;
       outline:0;
       resize:none;
-      overflow-y:auto;      /* se qualcosa va storto puoi comunque scorrere */
+      overflow-y:auto;
       background:transparent;
       color:inherit;
       font-size:14px;
@@ -269,6 +269,7 @@
     <div class="headerInner">
       <button class="btn" id="btnNew">+ Nuovo pop</button>
       <button class="btn" id="btnMove">Sposta</button>
+      <button class="btn" id="btnPan">Pan</button>
       <button class="btn" id="btnLink">Collega</button>
       <button class="btn danger" id="btnDelete">Elimina</button>
 
@@ -282,7 +283,7 @@
       <button class="btn tiny" id="btnZoomOut">-</button>
 
       <span class="hint">
-        Doppio click = crea box • Trascina = sposta • click linea = seleziona (per eliminare) • doppio click linea = modifica • <kbd>CANC</kbd>/Elimina = elimina • <kbd>ESC</kbd> = annulla collega
+        Doppio click = crea box • Trascina sfondo in modalità Pan = sposta vista • click linea = seleziona (per eliminare) • doppio click linea = modifica • <kbd>CANC</kbd>/Elimina = elimina • <kbd>ESC</kbd> = annulla collega
       </span>
 
       <div class="textControls">
@@ -342,6 +343,7 @@
   var btnExportHtml = document.getElementById("btnExportHtml");
   var btnImport = document.getElementById("btnImport");
   var btnMove = document.getElementById("btnMove");
+  var btnPan = document.getElementById("btnPan");
   var fileInput = document.getElementById("fileInput");
   var btnZoomIn = document.getElementById("btnZoomIn");
   var btnZoomOut = document.getElementById("btnZoomOut");
@@ -361,6 +363,7 @@
   var selectedLinkId = null;
   var linkingFrom = null;
   var moveMode = false;
+  var panMode = false;
 
   var view = { x: 0, y: 0, s: 1 };
 
@@ -397,6 +400,10 @@
     pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
 
     if (pointers.size === 1){
+      if (!panMode) {
+        panState = null;
+        return;
+      }
       panState = { startX:view.x, startY:view.y, p0:{x:e.clientX,y:e.clientY} };
       pinchState = null;
     }
@@ -440,8 +447,10 @@
     }
 
     if (pointers.size === 1 && panState){
-      view.x = panState.startX + (e.clientX - panState.p0.x);
-      view.y = panState.startY + (e.clientY - panState.p0.y);
+      var dx = e.clientX - panState.p0.x;
+      var dy = e.clientY - panState.p0.y;
+      view.x = panState.startX + dx;
+      view.y = panState.startY + dy;
       applyView();
       renderLinks();
     }
@@ -693,9 +702,21 @@
     updateTextControls();
   }
 
+  function setPanMode(on){
+    panMode = !!on;
+    if (panMode){
+      btnPan.classList.add("active");
+      setStatus("Modalità Pan: trascina lo sfondo per spostarti.");
+    } else {
+      btnPan.classList.remove("active");
+      setStatus("Pronto");
+    }
+  }
+
   function setLinkMode(on) {
     if (on) {
       if (moveMode) setMoveMode(false);
+      if (panMode) setPanMode(false);
       if (!selectedBoxId) { setStatus("Seleziona un box prima di collegare."); return; }
 
       linkPreset = linkPreset || { end:"arrow", shape:"straight", curveDir:1 };
@@ -727,6 +748,7 @@
 
     if (moveMode) {
       setLinkMode(false);
+      setPanMode(false);
       btnMove.classList.add("active");
       setStatus("Modalita sposta: trascina i box.");
     } else {
@@ -1116,24 +1138,6 @@
     setStatus("Import OK.");
   }
 
-  function doImport() {
-    fileInput.value = "";
-    fileInput.click();
-  }
-
-  fileInput.addEventListener("change", function (e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-    file.text().then(function (text) {
-      var state = parseImportedText(text);
-      applyState(state);
-    }).catch(function (err) {
-      console.error(err);
-      setStatus("Errore import.");
-      alert("Import fallito: usa un file esportato da questa app (JSON o HTML).");
-    });
-  });
-
   function exportPDF() {
     setStatus("Stampa: scegli Salva come PDF.");
     window.print();
@@ -1171,6 +1175,15 @@
   btnLink.addEventListener("click", function () { setLinkMode(!linkingFrom); });
   btnDelete.addEventListener("click", deleteSelected);
   btnMove.addEventListener("click", function () { setMoveMode(!moveMode); });
+
+  btnPan.addEventListener("click", function () {
+    var newOn = !panMode;
+    if (newOn) {
+      setMoveMode(false);
+      setLinkMode(false);
+    }
+    setPanMode(newOn);
+  });
 
   btnPdf.addEventListener("click", exportPDF);
   btnExportJson.addEventListener("click", exportJSON);
@@ -1231,6 +1244,24 @@
       autoGrow(ta, p);
     }
     updateTextControls();
+  });
+
+  function doImport() {
+    fileInput.value = "";
+    fileInput.click();
+  }
+
+  fileInput.addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    file.text().then(function (text) {
+      var state = parseImportedText(text);
+      applyState(state);
+    }).catch(function (err) {
+      console.error(err);
+      setStatus("Errore import.");
+      alert("Import fallito: usa un file esportato da questa app (JSON o HTML).");
+    });
   });
 
   render();
