@@ -1,207 +1,130 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>mappificio</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mappa mentale</title>
   <style>
-    :root { --bg:#f6f7fb; --grid:rgba(0,0,0,.06); --ink:#1a1a1a; }
+    :root{
+      --bg: #f2f4f8;
+      --ink:#111;
+      --accent:#0078ff;
+    }
 
-    html, body { height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; color:var(--ink); }
-    #app { height:100%; display:grid; grid-template-rows:auto 1fr; }
+    *{ box-sizing:border-box; }
 
-    /* HEADER con wrapper interno + maniglia */
+    html, body{
+      margin:0;
+      padding:0;
+      height:100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+    }
+
+    body{
+      display:flex;
+      flex-direction:column;
+    }
+
+    #app{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+
     header{
-      position:sticky;
-      top:0;
-      z-index:10;
+      position:relative;
       background:#fff;
       border-bottom:1px solid rgba(0,0,0,.08);
-      box-shadow:0 2px 6px rgba(0,0,0,.06);
-      box-sizing:border-box;
+      box-shadow:0 2px 4px rgba(0,0,0,.04);
+      z-index:10;
+      transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
     }
+    header.collapsed{
+      transform:translateY(calc(-100% + 14px));
+      box-shadow:none;
+      opacity:0.96;
+    }
+
     .headerInner{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      padding:10px 12px;
-    }
-    .headerHandle{
-      width:100%;
-      height:8px;
-      background:rgba(0,0,0,.20);
-      cursor:pointer;
-    }
-    header.collapsed .headerInner{
-      display:none;
-    }
-
-    .btn{
-      border:1px solid rgba(0,0,0,.18);
-      background:#fff;
-      border-radius:10px;
-      padding:7px 10px;
-      cursor:pointer;
-      font-size:13px;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn:hover{ background:#f7f7f7; }
-    .btn.active{
-      border-color: rgba(0,120,255,.55);
-      box-shadow: 0 0 0 3px rgba(0,120,255,.18);
-    }
-    .btn.danger{ border-color: rgba(200,0,0,.28); }
-    .btn.danger:hover{ background: rgba(200,0,0,.06); }
-
-    .hint{ font-size:13px; opacity:.75; flex: 1 1 320px; }
-    kbd{
-      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      font-size:12px; border:1px solid rgba(0,0,0,.2); border-bottom-width:2px;
-      padding:1px 6px; border-radius:6px; background:#fafafa;
-    }
-    .status{ font-size:13px; opacity:.9; white-space:nowrap; }
-
-    .textControls{
       display:flex;
       align-items:center;
       gap:6px;
-      font-size:13px;
-      white-space:nowrap;
+      padding:6px 10px;
+      font-size:14px;
     }
-    .textControls input[type="color"]{
-      width:26px;
-      height:26px;
-      padding:0;
-      border-radius:6px;
-      border:1px solid rgba(0,0,0,.18);
+
+    .headerHandle{
+      position:absolute;
+      left:50%;
+      bottom:-10px;
+      width:70px;
+      height:20px;
+      border-radius:99px;
       background:#fff;
+      border:1px solid rgba(0,0,0,.12);
+      box-shadow:0 3px 8px rgba(0,0,0,.10);
+      transform:translateX(-50%);
       cursor:pointer;
-    }
-    .btn.tiny{
-      padding:4px 7px;
-      font-size:12px;
-      border-radius:8px;
-    }
-    .btn.tiny.active{
-      border-color: rgba(0,120,255,.7);
-      box-shadow:0 0 0 2px rgba(0,120,255,.22);
-    }
-
-    #board{
-      position:relative; overflow:hidden;
-      touch-action: none;
-      background:
-        linear-gradient(var(--bg), var(--bg)),
-        repeating-linear-gradient(0deg, transparent, transparent 23px, var(--grid) 24px),
-        repeating-linear-gradient(90deg, transparent, transparent 23px, var(--grid) 24px);
-    }
-    #viewport{
-      position:absolute;
-      left:0; top:0;
-      width:8000px;
-      height:8000px;
-      transform-origin: 0 0;
-    }
-
-    #world{
-      position:absolute;
-      left:0;
-      top:0;
-      width:100%;
-      height:100%;
-      pointer-events:none;
-    }
-
-    svg{
-      position:absolute; inset:0;
-      width:100%;
-      height:100%;
-      overflow:visible;
-      pointer-events:auto;
-    }
-
-    .pop{
-      position:absolute;
-      width:20ch;
-      max-width:48ch;
-      background:#fff;
-      border:1px solid rgba(0,0,0,.55);
-      border-radius:14px;
-      box-shadow:0 8px 24px rgba(0,0,0,.10);
-      padding:10px;
-      box-sizing:border-box;
-      user-select:none;
-      cursor:grab;
       display:flex;
       align-items:center;
       justify-content:center;
-      touch-action: none;
-      pointer-events:auto;
     }
-    .pop:active{ cursor:grabbing; }
-    .pop.selected{ outline:3px solid rgba(0,120,255,.25); }
-    .pop.linking{ background:rgba(0,120,255,.08)!important; border-color:rgba(0,120,255,.35)!important; }
-
-    .body{
-      width:100%;
-      border:0;
-      outline:0;
-      resize:none;
-      overflow-y:auto;
-      background:transparent;
-      color:inherit;
-      font-size:14px;
-      line-height:1.25;
-      padding:0;
-      margin:0;
-      box-sizing:border-box;
-      min-height:1.25em;
-      white-space:pre-wrap;
-      word-break:break-word;
-      text-align:center;
+    .headerHandle::before{
+      content:"";
+      width:26px;
+      height:3px;
+      border-radius:999px;
+      background:rgba(0,0,0,.28);
     }
 
-    .linkLine{
-      pointer-events:stroke;
-      fill: none;
+    .btn{
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.18);
+      background:#fff;
+      padding:4px 10px;
+      font-size:13px;
       cursor:pointer;
-      stroke: rgba(0,0,0,.55);
-      stroke-width: 2;
-      stroke-linecap: round;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      transition:background .12s ease, box-shadow .12s ease, border-color .12s ease, transform .05s ease;
+      user-select:none;
+      white-space:nowrap;
     }
-    .linkLine.selected{
-      stroke-width: 3;
+    .btn:hover{
+      background:#f5f7fb;
+      box-shadow:0 1px 3px rgba(0,0,0,.12);
+    }
+    .btn:active{
+      transform:translateY(1px);
+      box-shadow:none;
+    }
+    .btn.tiny{
+      padding:2px 8px;
+      font-size:12px;
+    }
+    .btn.danger{
+      border-color:rgba(200,0,0,.35);
+      color:#b00020;
+    }
+    .btn.danger:hover{
+      background:#ffecef;
+      box-shadow:0 1px 3px rgba(176,0,32,.35);
+    }
+    .btn.active{
+      background:rgba(0,120,255,.10);
+      border-color:rgba(0,120,255,.8);
+      box-shadow:0 0 0 2px rgba(0,120,255,.25);
     }
 
-    .ghost{
-      position:absolute; inset:0; pointer-events:none;
-      display:flex; align-items:center; justify-content:center;
-      font-size:14px; opacity:.55;
-    }
-
-    @media print {
-      header { display:none !important; }
-      .ghost { display:none !important; }
-
-      html, body { height: 100% !important; }
-      #app { height: 100% !important; }
-
-      #board {
-        background:#fff !important;
-        overflow: visible !important;
-        height: 100vh !important;
-      }
-
-      #wires {
-        width: 100% !important;
-        height: 100% !important;
-      }
-
-      svg {
-        overflow: visible !important;
-      }
+    .status{
+      margin-left:auto;
+      font-size:12px;
+      opacity:.75;
     }
 
     #mapTitle {
@@ -238,6 +161,165 @@
       border-color: rgba(0,120,255,.6);
     }
 
+    .textControls{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      margin-left:10px;
+      font-size:12px;
+    }
+    .textControls > span{
+      opacity:.7;
+    }
+    .textControls input[type="color"]{
+      width:32px;
+      height:22px;
+      padding:0;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.18);
+      background:#fff;
+      cursor:pointer;
+    }
+
+    #board{
+      position:relative;
+      flex:1;
+      min-height:0;
+      background:radial-gradient(circle at 0 0, #fff 0, #fff 40%, #f2f4f8 100%);
+      overflow:hidden;
+      touch-action:none;
+    }
+
+    #viewport{
+      position:absolute;
+      inset:0;
+      background-size:24px 24px;
+      background-image:linear-gradient(to right, rgba(0,0,0,.04) 1px, transparent 1px),
+                       linear-gradient(to bottom, rgba(0,0,0,.04) 1px, transparent 1px);
+      transform-origin:0 0;
+    }
+
+    #world{
+      position:absolute;
+      left:0; top:0;
+      width:8000px;
+      height:8000px;
+      transform-origin: 0 0;
+    }
+
+    svg{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      pointer-events:auto;
+    }
+
+    .pop{
+      position:absolute;
+      min-width:8ch;
+      max-width:48ch;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.55);
+      border-radius:999px;
+      box-shadow:0 8px 24px rgba(0,0,0,.10);
+      padding:8px 12px;
+      box-sizing:border-box;
+      user-select:none;
+      cursor:grab;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      touch-action:none;
+    }
+    .pop:active{ cursor:grabbing; }
+    .pop.selected{ outline:3px solid rgba(0,120,255,.25); }
+    .pop.linking{ background:rgba(0,120,255,.08)!important; border-color:rgba(0,120,255,.35)!important; }
+
+    .body{
+      width:100%;
+      border:0;
+      outline:0;
+      resize:none;
+      overflow-y:auto;
+      background:transparent;
+      color:inherit;
+      font-size:18px;
+      line-height:1.3;
+      padding:0;
+      margin:0;
+      box-sizing:border-box;
+      min-height:1.4em;
+      white-space:pre-wrap;
+      word-break:normal;
+      text-align:center;
+      font-weight:700;
+    }
+
+    .body::placeholder{
+      color:rgba(0,0,0,.45);
+      font-size:14px;
+      text-align:center;
+    }
+
+    .linkLine{
+      pointer-events:stroke;
+      cursor:pointer;
+      stroke: rgba(0,0,0,.55);
+      stroke-width: 2;
+      stroke-linecap: round;
+      fill:none;
+    }
+    .linkLine.selected{
+      stroke: rgba(0,120,255,.85);
+      stroke-width: 3;
+    }
+
+    .linkArrow{
+      fill: rgba(0,0,0,.55);
+      pointer-events:none;
+    }
+    .linkLine.selected + .linkArrow{
+      fill: rgba(0,120,255,.85);
+    }
+
+    .linkLabel{
+      font-size:12px;
+      pointer-events:auto;
+      cursor:text;
+      user-select:none;
+    }
+
+    .ghost{
+      position:absolute; inset:0; pointer-events:none;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; opacity:.55;
+    }
+
+    /* Controlli flottanti in basso a destra/sinistra */
+    #controlsRight {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+
+    #controlsLeft {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 999;
+    }
+
+    #controlsRight .btn,
+    #controlsLeft .btn {
+      pointer-events: auto;
+    }
+
     /* POPUP generici */
     .modalOverlay{
       position:fixed; inset:0;
@@ -259,6 +341,48 @@
     .modal .row{ display:flex; gap:12px; flex-wrap:wrap; margin:10px 0; }
     .modal label{ display:flex; gap:8px; align-items:center; font-size:14px; cursor:pointer; }
     .modal .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px; }
+
+    /* Pulsante doppio Salva rapido / Opzioni salvataggio */
+    .saveSplit{
+      display:inline-flex;
+      flex-direction:column;
+      margin:0 6px;
+    }
+    .saveSplit .btn{
+      padding:4px 10px;
+      font-size:12px;
+      border-radius:0;
+    }
+    .saveSplit .btn.saveTop{
+      border-radius:10px 10px 0 0;
+      border-bottom-width:0;
+    }
+    .saveSplit .btn.saveBottom{
+      border-radius:0 0 10px 10px;
+    }
+
+    @media print {
+      header { display:none !important; }
+      .ghost { display:none !important; }
+
+      html, body { height: 100% !important; }
+      #app { height: 100% !important; }
+
+      #board {
+        background:#fff !important;
+        overflow: visible !important;
+        height: 100vh !important;
+      }
+
+      #wires {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      svg {
+        overflow: visible !important;
+      }
+    }
   </style>
 </head>
 
@@ -272,9 +396,18 @@
       <button class="btn" id="btnLink">Collega</button>
       <button class="btn danger" id="btnDelete">Elimina</button>
 
-      <button class="btn" id="btnPdf">Salva in PDF</button>
-      <button class="btn" id="btnExportJson">Salva in JSON</button>
-      <button class="btn" id="btnExportHtml">Salva in HTML</button>
+      <button class="btn" id="btnPdf">Stampa in PDF</button>
+
+      <!-- Pulsante doppio Salva rapido / Opzioni salvataggio -->
+      <div class="saveSplit">
+        <button class="btn saveTop" id="btnQuickSave">
+          <span>Salva rapido</span>
+        </button>
+        <button class="btn saveBottom" id="btnSaveOptions">
+          <span>Opzioni salvataggio</span>
+        </button>
+      </div>
+
       <button class="btn" id="btnImport">Importa HTML/JSON</button>
       <input id="fileInput" type="file" accept=".json,.html" style="display:none" />
 
@@ -329,6 +462,51 @@
     </div>
   </div>
 
+  <!-- PANNELLO OPZIONI SALVATAGGIO -->
+  <div class="modalOverlay" id="saveOverlay">
+    <div class="modal">
+      <h3>Opzioni di salvataggio</h3>
+      <div class="row">
+        <label>
+          <input type="radio" name="saveFormat" value="json" checked>
+          JSON (dati della mappa)
+        </label>
+        <label>
+          <input type="radio" name="saveFormat" value="html">
+          HTML (pagina con file incorporato)
+        </label>
+      </div>
+      <div class="row">
+        <label style="flex:1; flex-direction:column; align-items:flex-start;">
+          <span>Nome file:</span>
+          <input type="text" id="saveFileName"
+                 style="width:100%; margin-top:4px; padding:4px 6px; font-size:14px; box-sizing:border-box;">
+        </label>
+      </div>
+      <p style="font-size:12px; opacity:0.8; margin:4px 0 0;">
+        Puoi scrivere il nome senza estensione: verrà aggiunta automaticamente (.json o .html).
+      </p>
+      <div class="actions">
+        <button class="btn tiny" id="btnSaveCancel">Annulla</button>
+        <button class="btn tiny" id="btnSaveConfirm">Salva</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controlli flottanti -->
+  <div id="controlsLeft">
+    <button class="btn" id="btnMove_f">Sposta</button>
+    <button class="btn" id="btnLink_f">Collega</button>
+  </div>
+
+  <div id="controlsRight">
+    <button class="btn tiny" id="btnZoomIn_f">+</button>
+    <button class="btn tiny" id="btnZoomOut_f">-</button>
+    <button class="btn tiny" id="btnPan_f" title="Pan vista">✋</button>
+  </div>
+
+</div>
+
 <script>
 (function () {
   var board = document.getElementById("board");
@@ -352,9 +530,16 @@
   var btnLink = document.getElementById("btnLink");
   var btnDelete = document.getElementById("btnDelete");
   var btnPdf = document.getElementById("btnPdf");
-  var btnExportJson = document.getElementById("btnExportJson");
-  var btnExportHtml = document.getElementById("btnExportHtml");
   var btnImport = document.getElementById("btnImport");
+
+  // Nuovi pulsanti salvataggio
+  var btnQuickSave    = document.getElementById("btnQuickSave");
+  var btnSaveOptions  = document.getElementById("btnSaveOptions");
+  var saveOverlay     = document.getElementById("saveOverlay");
+  var saveFileNameInp = document.getElementById("saveFileName");
+  var btnSaveCancel   = document.getElementById("btnSaveCancel");
+  var btnSaveConfirm  = document.getElementById("btnSaveConfirm");
+
   var btnMove = document.getElementById("btnMove");
   var btnPan = document.getElementById("btnPan");
   var btnKeyboardHelp = document.getElementById("btnKeyboardHelp");
@@ -364,168 +549,203 @@
   var btnZoomIn = document.getElementById("btnZoomIn");
   var btnZoomOut = document.getElementById("btnZoomOut");
 
+  // Bottoni flottanti
+  var btnZoomIn_f  = document.getElementById("btnZoomIn_f");
+  var btnZoomOut_f = document.getElementById("btnZoomOut_f");
+  var btnPan_f     = document.getElementById("btnPan_f");
+  var btnMove_f    = document.getElementById("btnMove_f");
+  var btnLink_f    = document.getElementById("btnLink_f");
+
   var txtColor = document.getElementById("txtColor");
   var btnSizeSmall = document.getElementById("btnSizeSmall");
   var btnSizeLarge = document.getElementById("btnSizeLarge");
   var btnBold = document.getElementById("btnBold");
 
-  function setStatus(msg){ statusEl.textContent = msg; }
-  function uid(){ return Math.random().toString(36).slice(2, 10); }
-  function boardRect(){ return board.getBoundingClientRect(); }
-
-  var pops = [];   // {id,x,y,text,color,size,bold,height}
-  var links = [];  // {id,from,to,end,shape,curveDir}
+  var pops = [];
+  var links = [];
   var selectedBoxId = null;
   var selectedLinkId = null;
   var linkingFrom = null;
   var moveMode = false;
   var panMode = false;
 
-  var view = { x: 0, y: 0, s: 1 };
+  var view = { x:0, y:0, s:1 };
 
-  function clampScale(s){
-    return Math.max(0.35, Math.min(2.8, s));
-  }
-
-  function applyView(){
-    viewport.style.transform = "translate(" + view.x + "px," + view.y + "px) scale(" + view.s + ")";
-  }
-
-  function screenToWorld(clientX, clientY){
-    var br = board.getBoundingClientRect();
-    var sx = clientX - br.left;
-    var sy = clientY - br.top;
-    return { x: (sx - view.x)/view.s, y: (sy - view.y)/view.s };
-  }
-
-  applyView();
-
-  var pointers = new Map();
-  var panState = null;
-  var pinchState = null;
-
-  function dist(a,b){
-    var dx=a.x-b.x, dy=a.y-b.y;
-    return Math.hypot(dx,dy);
-  }
-
-  board.addEventListener("pointerdown", function(e){
-    if (e.target.closest(".pop")) return;
-
-    board.setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
-
-    if (pointers.size === 1){
-      if (!panMode) {
-        panState = null;
-        return;
-      }
-      panState = { startX:view.x, startY:view.y, p0:{x:e.clientX,y:e.clientY} };
-      pinchState = null;
-    }
-
-    if (pointers.size === 2){
-      var arr = Array.from(pointers.values());
-      var pA = arr[0], pB = arr[1];
-      var mid = { x:(pA.x+pB.x)/2, y:(pA.y+pB.y)/2 };
-      var wMid = screenToWorld(mid.x, mid.y);
-
-      pinchState = {
-        startS: view.s,
-        startD: dist(pA,pB),
-        midScreen: mid,
-        midWorld: wMid
-      };
-      panState = null;
-    }
-  });
-
-  board.addEventListener("pointermove", function(e){
-    if (!pointers.has(e.pointerId)) return;
-    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
-
-    if (pinchState && pointers.size >= 2){
-      var arr = Array.from(pointers.values());
-      var pA = arr[0], pB = arr[1];
-      var d = dist(pA,pB);
-      view.s = clampScale(pinchState.startS * (d / pinchState.startD));
-
-      var br = board.getBoundingClientRect();
-      var midSx = pinchState.midScreen.x - br.left;
-      var midSy = pinchState.midScreen.y - br.top;
-
-      view.x = midSx - pinchState.midWorld.x * view.s;
-      view.y = midSy - pinchState.midWorld.y * view.s;
-
-      applyView();
-      renderLinks();
-      return;
-    }
-
-    if (pointers.size === 1 && panState){
-      var dx = e.clientX - panState.p0.x;
-      var dy = e.clientY - panState.p0.y;
-      view.x = panState.startX + dx;
-      view.y = panState.startY + dy;
-      applyView();
-      renderLinks();
-    }
-  });
-
-  board.addEventListener("pointerup", function(e){
-    pointers.delete(e.pointerId);
-    if (pointers.size === 0){
-      panState = null;
-      pinchState = null;
-    }
-  });
-
-  board.addEventListener("pointercancel", function(){
-    pointers.clear();
-    panState = null;
-    pinchState = null;
-  });
-
-  board.addEventListener("wheel", function(e){
-    if (!e.ctrlKey) return;
-    e.preventDefault();
-
-    var before = screenToWorld(e.clientX, e.clientY);
-    var factor = (e.deltaY < 0) ? 1.08 : 0.92;
-    view.s = clampScale(view.s * factor);
-
-    var br = board.getBoundingClientRect();
-    var sx = e.clientX - br.left;
-    var sy = e.clientY - br.top;
-
-    view.x = sx - before.x * view.s;
-    view.y = sy - before.y * view.s;
-
-    applyView();
-    renderLinks();
-  }, { passive:false });
-
-
-  function zoomAroundCenter(factor){
-    var br = board.getBoundingClientRect();
-    var cx = br.left + br.width/2;
-    var cy = br.top + br.height/2;
-    var before = screenToWorld(cx, cy);
-
-    view.s = clampScale(view.s * factor);
-
-    var sx = cx - br.left;
-    var sy = cy - br.top;
-
-    view.x = sx - before.x * view.s;
-    view.y = sy - before.y * view.s;
-
-    applyView();
-    renderLinks();
-  }
+  var lastSaveBaseName = "";
+  var lastSaveFormat   = "json";
 
   var linkPreset = { end: "arrow", shape: "straight", curveDir: 1 };
   var linkModal = null;
+
+  function setStatus(msg) {
+    if (statusEl) statusEl.textContent = msg;
+  }
+
+  function uid() {
+    return "p" + Math.random().toString(36).slice(2);
+  }
+
+  function boardRect() {
+    return board.getBoundingClientRect();
+  }
+
+  function screenToWorld(sx, sy) {
+    var r = boardRect();
+    var x = (sx - r.left - view.x) / view.s;
+    var y = (sy - r.top  - view.y) / view.s;
+    return { x:x, y:y };
+  }
+
+  function applyCamera() {
+    viewport.style.transform =
+      "translate(" + view.x + "px," + view.y + "px) scale(" + view.s + ")";
+  }
+
+  function clampToBoard(x, y) {
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+    if (x > 7800) x = 7800;
+    if (y > 7800) y = 7800;
+    return { x:x, y:y };
+  }
+
+  function zoomAroundCenter(factor) {
+    var r = boardRect();
+    var cx = r.left + r.width/2;
+    var cy = r.top  + r.height/2;
+
+    var before = screenToWorld(cx, cy);
+    var newS = view.s * factor;
+    if (newS < 0.25) newS = 0.25;
+    if (newS > 4.0) newS = 4.0;
+    view.s = newS;
+
+    var after = screenToWorld(cx, cy);
+    view.x += (after.x - before.x) * view.s;
+    view.y += (after.y - before.y) * view.s;
+
+    applyCamera();
+    renderLinks();
+  }
+
+  function clearSelections() {
+    selectedBoxId = null;
+    selectedLinkId = null;
+
+    var a = document.querySelectorAll(".pop");
+    for (var i=0;i<a.length;i++) a[i].classList.remove("selected","linking");
+
+    var b = document.querySelectorAll(".linkLine");
+    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
+
+    updateTextControls();
+  }
+
+  function selectBox(id) {
+    selectedBoxId = id;
+    selectedLinkId = null;
+    var a = document.querySelectorAll(".pop");
+    for (var i=0;i<a.length;i++) {
+      a[i].classList.toggle("selected", a[i].dataset.id === id);
+      a[i].classList.remove("linking");
+    }
+    var b = document.querySelectorAll(".linkLine");
+    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
+    updateTextControls();
+  }
+
+  function selectLink(id) {
+    selectedLinkId = id;
+    selectedBoxId = null;
+    var a = document.querySelectorAll(".linkLine");
+    for (var i=0;i<a.length;i++) {
+      a[i].classList.toggle("selected", a[i].dataset.linkid === id);
+    }
+    var b = document.querySelectorAll(".pop");
+    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
+    updateTextControls();
+  }
+
+  function setLinkMode(on) {
+    if (on) {
+      if (moveMode) setMoveMode(false);
+      if (!selectedBoxId) { setStatus("Seleziona un box prima di collegare."); return; }
+      linkingFrom = selectedBoxId;
+      btnLink.classList.add("active");
+      if (btnLink_f) btnLink_f.classList.add("active");
+      var a = document.querySelectorAll(".pop");
+      for (var i=0;i<a.length;i++) {
+        a[i].classList.toggle("linking", a[i].dataset.id === linkingFrom);
+      }
+      setStatus("Modalità collega: clicca un altro box.");
+    } else {
+      linkingFrom = null;
+      btnLink.classList.remove("active");
+      if (btnLink_f) btnLink_f.classList.remove("active");
+      var b = document.querySelectorAll(".pop");
+      for (var j=0;j<b.length;j++) b[j].classList.remove("linking");
+      setStatus("Pronto");
+    }
+  }
+
+  function setMoveMode(on) {
+    moveMode = !!on;
+
+    if (moveMode) {
+      setLinkMode(false);
+      setPanMode(false);
+      btnMove.classList.add("active");
+      if (btnMove_f) btnMove_f.classList.add("active");
+      setStatus("Modalità sposta: trascina i box.");
+    } else {
+      btnMove.classList.remove("active");
+      if (btnMove_f) btnMove_f.classList.remove("active");
+      setStatus("Pronto");
+    }
+
+    var tas = document.querySelectorAll(".pop .body");
+    for (var i = 0; i < tas.length; i++) {
+      tas[i].readOnly = moveMode;
+    }
+  }
+
+  function setPanMode(on){
+    panMode = !!on;
+    if (panMode){
+      btnPan.classList.add("active");
+      if (btnPan_f) btnPan_f.classList.add("active");
+      setStatus("Modalità Pan: trascina lo sfondo per spostarti.");
+    } else {
+      btnPan.classList.remove("active");
+      if (btnPan_f) btnPan_f.classList.remove("active");
+      setStatus("Pronto");
+    }
+  }
+
+  function autoGrow(ta, popModel) {
+    ta.style.height = "auto";
+    ta.style.height = (ta.scrollHeight || 24) + "px";
+    var h = ta.offsetHeight || 24;
+    popModel.height = h + 8;
+    var box = ta.closest(".pop");
+    if (box) {
+      box.style.height = popModel.height + "px";
+    }
+  }
+
+  function addLink(from, to, preset) {
+    if (!from || !to || from === to) return;
+    var id = "l" + Math.random().toString(36).slice(2);
+    links.push({
+      id:id,
+      from:from,
+      to:to,
+      label:"",
+      end:(preset && preset.end) || "arrow",
+      shape:(preset && preset.shape) || "straight",
+      curveDir:(preset && typeof preset.curveDir==="number" ? preset.curveDir : 1)
+    });
+  }
 
   function ensureLinkModal() {
     if (linkModal) return;
@@ -589,8 +809,7 @@
     if (endRadio) endRadio.checked = true;
     if (shapeRadio) shapeRadio.checked = true;
 
-    var curveRadioVal = (linkPreset.curveDir === -1) ? "up" : "down";
-    var curveRadio = linkModal.querySelector('input[name="curveDir"][value="' + curveRadioVal + '"]');
+    var curveRadio = linkModal.querySelector('input[name="curveDir"][value="' + (linkPreset.curveDir === 1 ? "down" : "up") + '"]');
     if (curveRadio) curveRadio.checked = true;
 
     if (typeof linkModal._updateCurveRadiosDisabled === "function") {
@@ -599,410 +818,181 @@
 
     linkModal.style.display = "flex";
 
-    function close() {
+    var cancelBtn = document.getElementById("linkOptCancel");
+    var okBtn = document.getElementById("linkOptOk");
+
+    function closeModal() {
       linkModal.style.display = "none";
-      okBtn.onclick = null;
-      cancelBtn.onclick = null;
-      linkModal.onclick = null;
+      window.removeEventListener("keydown", onKey);
+      cancelBtn.removeEventListener("click", onCancel);
+      okBtn.removeEventListener("click", onOk);
     }
 
-    var okBtn = linkModal.querySelector("#linkOptOk");
-    var cancelBtn = linkModal.querySelector("#linkOptCancel");
+    function onCancel() {
+      closeModal();
+      if (done) done(null);
+    }
 
-    okBtn.onclick = function () {
+    function onOk() {
       var endVal = (linkModal.querySelector('input[name="linkEnd"]:checked') || {}).value || "arrow";
       var shapeVal = (linkModal.querySelector('input[name="linkShape"]:checked') || {}).value || "straight";
+      var curveVal = (linkModal.querySelector('input[name="curveDir"]:checked') || {}).value || "down";
 
-      var curveDir = linkPreset.curveDir || 1;
-      if (shapeVal === "curve") {
-        var curveVal = (linkModal.querySelector('input[name="curveDir"]:checked') || {}).value || "down";
-        curveDir = (curveVal === "up") ? -1 : 1;
+      linkPreset.end = endVal;
+      linkPreset.shape = shapeVal;
+      linkPreset.curveDir = (curveVal === "down" ? 1 : -1);
+
+      closeModal();
+      if (done) done(linkPreset);
+    }
+
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      }
+    }
+
+    cancelBtn.addEventListener("click", onCancel);
+    okBtn.addEventListener("click", onOk);
+    window.addEventListener("keydown", onKey);
+  }
+
+  function renderLinks() {
+    svg.innerHTML = "";
+
+    function centerOfPop(p) {
+      return { x:p.x + (p.width || 160)/2, y:p.y + (p.height || 50)/2 };
+    }
+
+    links.forEach(function(l){
+      var from = pops.find(function(p){ return p.id === l.from; });
+      var to   = pops.find(function(p){ return p.id === l.to; });
+      if (!from || !to) return;
+
+      var a = centerOfPop(from);
+      var b = centerOfPop(to);
+
+      var dx = b.x - a.x;
+      var dy = b.y - a.y;
+      var dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      var ux = dx / dist;
+      var uy = dy / dist;
+
+      var offset = 40;
+      var start = { x: a.x + ux*offset, y: a.y + uy*offset };
+      var end   = { x: b.x - ux*offset, y: b.y - uy*offset };
+
+      var pathData;
+      if (l.shape === "curve") {
+        var midx = (start.x + end.x)/2;
+        var midy = (start.y + end.y)/2;
+        var nx = -uy;
+        var ny = ux;
+        var curveAmount = 60 * (l.curveDir || 1);
+        var cx = midx + nx * curveAmount;
+        var cy = midy + ny * curveAmount;
+        pathData = "M " + start.x + " " + start.y +
+                   " Q " + cx + " " + cy +
+                   " " + end.x + " " + end.y;
+      } else {
+        pathData = "M " + start.x + " " + start.y +
+                   " L " + end.x + " " + end.y;
       }
 
-      linkPreset = { end: endVal, shape: shapeVal, curveDir: curveDir };
-      close();
-      done(true);
-    };
+      var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      path.setAttribute("class", "linkLine" + (l.id === selectedLinkId ? " selected" : ""));
+      path.dataset.linkid = l.id;
+      svg.appendChild(path);
 
-    cancelBtn.onclick = function () {
-      close();
-      done(false);
-    };
+      if (l.end === "arrow") {
+        var arrowSize = 8;
+        var ax = end.x;
+        var ay = end.y;
+        var px = -ux;
+        var py = -uy;
+        var leftX  = ax + px*arrowSize - py*(arrowSize*0.7);
+        var leftY  = ay + py*arrowSize + px*(arrowSize*0.7);
+        var rightX = ax + px*arrowSize + py*(arrowSize*0.7);
+        var rightY = ay + py*arrowSize - px*(arrowSize*0.7);
 
-    linkModal.onclick = function (e) {
-      if (e.target === linkModal) {
-        close();
-        done(false);
+        var arrow = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        arrow.setAttribute("points", ax + "," + ay + " " + leftX + "," + leftY + " " + rightX + "," + rightY);
+        arrow.setAttribute("class", "linkArrow");
+        svg.appendChild(arrow);
       }
-    };
+
+      if (l.label) {
+        var label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("class", "linkLabel");
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("alignment-baseline", "central");
+        var mx = (start.x + end.x)/2;
+        var my = (start.y + end.y)/2;
+        label.setAttribute("x", mx);
+        label.setAttribute("y", my - 4);
+
+        label.textContent = l.label;
+        svg.appendChild(label);
+
+        label.addEventListener("click", function(ev){
+          ev.stopPropagation();
+          var newText = prompt("Modifica etichetta del collegamento:", l.label);
+          if (newText !== null) {
+            l.label = newText;
+            renderLinks();
+          }
+        });
+      }
+
+      path.addEventListener("click", function(e){
+        e.stopPropagation();
+        selectLink(l.id);
+        setStatus("Collegamento selezionato.");
+      });
+    });
   }
 
-  function clampToBoard(x, y) {
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    return { x:x, y:y };
-  }
+  function updateTextControls() {
+    var hasSelection = !!selectedBoxId;
+    txtColor.disabled    = !hasSelection;
+    btnSizeSmall.disabled = !hasSelection;
+    btnSizeLarge.disabled = !hasSelection;
+    btnBold.disabled      = !hasSelection;
 
-  function disableTextControls() {
-    txtColor.disabled = true;
-    btnSizeSmall.disabled = true;
-    btnSizeLarge.disabled = true;
-    btnBold.disabled = true;
+    if (!hasSelection) return;
 
-    btnSizeSmall.classList.remove("active");
-    btnSizeLarge.classList.remove("active");
-    btnBold.classList.remove("active");
-  }
+    var p = pops.find(function(pp){ return pp.id === selectedBoxId; });
+    if (!p) return;
 
-  function enableTextControlsForPop(p) {
-    txtColor.disabled = false;
-    btnSizeSmall.disabled = false;
-    btnSizeLarge.disabled = false;
-    btnBold.disabled = false;
-
-    if (!p.color) p.color = "#000000";
-    if (!p.size) p.size = "small";
-    if (typeof p.bold === "undefined") p.bold = false;
-
-    txtColor.value = p.color;
+    txtColor.value = p.color || "#000000";
 
     btnSizeSmall.classList.toggle("active", p.size === "small");
     btnSizeLarge.classList.toggle("active", p.size === "large");
     btnBold.classList.toggle("active", !!p.bold);
   }
 
-  function updateTextControls() {
-    if (!selectedBoxId) {
-      disableTextControls();
-      return;
-    }
-    var p = pops.find(function(pp){ return pp.id === selectedBoxId; });
-    if (!p) {
-      disableTextControls();
-      return;
-    }
-    enableTextControlsForPop(p);
-  }
-
-  function clearSelections() {
-    selectedBoxId = null;
-    selectedLinkId = null;
-    var a = document.querySelectorAll(".pop");
-    for (var i=0;i<a.length;i++) a[i].classList.remove("selected");
-    var b = document.querySelectorAll(".linkLine");
-    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
-    updateTextControls();
-  }
-
-  function selectBox(id) {
-    selectedBoxId = id;
-    selectedLinkId = null;
-    var a = document.querySelectorAll(".pop");
-    for (var i=0;i<a.length;i++) {
-      a[i].classList.toggle("selected", a[i].dataset.id === id);
-    }
-    var b = document.querySelectorAll(".linkLine");
-    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
-    updateTextControls();
-  }
-
-  function selectLink(id) {
-    selectedLinkId = id;
-    selectedBoxId = null;
-    var a = document.querySelectorAll(".linkLine");
-    for (var i=0;i<a.length;i++) {
-      a[i].classList.toggle("selected", a[i].dataset.linkid === id);
-    }
-    var b = document.querySelectorAll(".pop");
-    for (var j=0;j<b.length;j++) b[j].classList.remove("selected");
-    updateTextControls();
-  }
-
-  function setPanMode(on){
-    panMode = !!on;
-    if (panMode){
-      btnPan.classList.add("active");
-      setStatus("Modalità Pan: trascina lo sfondo per spostarti.");
-    } else {
-      btnPan.classList.remove("active");
-      setStatus("Pronto");
-    }
-  }
-
-  function setLinkMode(on) {
-    if (on) {
-      if (moveMode) setMoveMode(false);
-      if (panMode) setPanMode(false);
-      if (!selectedBoxId) { setStatus("Seleziona un box prima di collegare."); return; }
-
-      linkPreset = linkPreset || { end:"arrow", shape:"straight", curveDir:1 };
-
-      openLinkOptions(function (ok) {
-        if (!ok) { setStatus("Collegamento annullato."); return; }
-
-        linkingFrom = selectedBoxId;
-        btnLink.classList.add("active");
-        var a = document.querySelectorAll(".pop");
-        for (var i=0;i<a.length;i++) {
-          a[i].classList.toggle("linking", a[i].dataset.id === linkingFrom);
-        }
-        setStatus("Modalita collega: clicca un altro box.");
-      });
-
-      return;
-    } else {
-      linkingFrom = null;
-      btnLink.classList.remove("active");
-      var b = document.querySelectorAll(".pop");
-      for (var j=0;j<b.length;j++) b[j].classList.remove("linking");
-      setStatus("Pronto");
-    }
-  }
-      
-  function setMoveMode(on) {
-    moveMode = !!on;
-
-    if (moveMode) {
-      setLinkMode(false);
-      setPanMode(false);
-      btnMove.classList.add("active");
-      setStatus("Modalita sposta: trascina i box.");
-    } else {
-      btnMove.classList.remove("active");
-      setStatus("Pronto");
-    }
-
-    var tas = document.querySelectorAll(".pop .body");
-    for (var i = 0; i < tas.length; i++) {
-      tas[i].readOnly = moveMode;
-    }
-  }
-  
-  /* Cresce ma non si restringe */
-  function autoGrow(ta, popModel) {
-    ta.style.height = "auto";
-    var needed = ta.scrollHeight;
-    if (popModel) {
-      if (!popModel.height || needed > popModel.height) {
-        popModel.height = needed;
-      }
-      ta.style.height = popModel.height + "px";
-    } else {
-      ta.style.height = needed + "px";
-    }
-  }
-
-  function resizeSelectedTextarea() {
-    if (!selectedBoxId) return;
-    var p = pops.find(function(pp){ return pp.id === selectedBoxId; });
-    if (!p) return;
-    var ta = document.querySelector('.pop[data-id="' + selectedBoxId + '"] .body');
-    if (ta) autoGrow(ta, p);
-  }
-
-  function createPop(x, y) {
-    var p = { id: uid(), x: x, y: y, text: "", color:"#000000", size:"small", bold:false, height:0 };
-    pops.push(p);
-    render();
-    selectBox(p.id);
-  }
-
-  function addLink(from, to, preset) {
-    if (!from || !to || from === to) return;
-    for (var i=0;i<links.length;i++) {
-      if (links[i].from === from && links[i].to === to) return;
-    }
-    var p = preset || linkPreset || { end:"arrow", shape:"straight", curveDir:1 };
-    var curveDir = (typeof p.curveDir === "number") ? p.curveDir : 1;
-    links.push({ id: uid(), from: from, to: to, end: p.end, shape: p.shape, curveDir: curveDir });
-  }
-
-  function deleteSelected() {
-    if (selectedLinkId) {
-      links = links.filter(function (l) { return l.id !== selectedLinkId; });
-      selectedLinkId = null;
-      renderLinks();
-      setStatus("Collegamento eliminato.");
-      return;
-    }
-    if (selectedBoxId) {
-      var id = selectedBoxId;
-      pops = pops.filter(function (p) { return p.id !== id; });
-      links = links.filter(function (l) { return l.from !== id && l.to !== id; });
-      selectedBoxId = null;
-      if (linkingFrom === id) setLinkMode(false);
-      render();
-      setStatus("Box eliminato.");
-      return;
-    }
-    setStatus("Nessuna selezione.");
-  }
-
-  function getPopBoxInBoardCoords(id) {
-    var el = document.querySelector('.pop[data-id="'+id+'"]');
-    if (!el) return null;
-
-    var x = el.offsetLeft;
-    var y = el.offsetTop;
-    var w = el.offsetWidth;
-    var h = el.offsetHeight;
-
-    return {
-      cx: x + w/2, cy: y + h/2,
-      hw: w/2, hh: h/2
-    };
-  }
-
-  function edgePoint(cx, cy, hw, hh, dx, dy) {
-    if (dx === 0 && dy === 0) return { x: cx, y: cy };
-    var tx = Math.abs(dx) / hw;
-    var ty = Math.abs(dy) / hh;
-    var t = 1 / Math.max(tx, ty);
-    return { x: cx + dx * t, y: cy + dy * t };
-  }
-
-  function renderLinks() {
-    while (svg.firstChild) svg.firstChild.remove();
-
-    var NS = "http://www.w3.org/2000/svg";
-    var defs = document.createElementNS(NS, "defs");
-    var marker = document.createElementNS(NS, "marker");
-    marker.setAttribute("id", "arrow");
-    marker.setAttribute("viewBox", "0 0 10 10");
-    marker.setAttribute("refX", "9");
-    marker.setAttribute("refY", "5");
-    marker.setAttribute("markerWidth", "7");
-    marker.setAttribute("markerHeight", "7");
-    marker.setAttribute("orient", "auto");
-    marker.setAttribute("markerUnits", "strokeWidth");
-
-    var path = document.createElementNS(NS, "path");
-    path.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
-    path.setAttribute("fill", "rgba(0,0,0,.55)");
-    marker.appendChild(path);
-    defs.appendChild(marker);
-    svg.appendChild(defs);
-
-    links.forEach(function (l) {
-      var A = getPopBoxInBoardCoords(l.from);
-      var B = getPopBoxInBoardCoords(l.to);
-      if (!A || !B) return;
-
-      var dx = B.cx - A.cx;
-      var dy = B.cy - A.cy;
-
-      var p1 = edgePoint(A.cx, A.cy, A.hw, A.hh, dx, dy);
-      var p2 = edgePoint(B.cx, B.cy, B.hw, B.hh, -dx, -dy);
-
-      var end = l.end || "arrow";
-      var shape = l.shape || "straight";
-
-      var color = "#000000";
-      var toPop = pops.find(function(pp){ return pp.id === l.to; });
-      if (toPop && toPop.color) color = toPop.color;
-
-      var elWire;
-
-      if (shape === "curve") {
-        var mx = (p1.x + p2.x) / 2;
-        var my = (p1.y + p2.y) / 2;
-
-        var len = Math.hypot(dx, dy) || 1;
-        var nx = -dy / len;
-        var ny =  dx / len;
-
-        var offset = Math.min(70, Math.max(20, len / 4));
-        var dir = (typeof l.curveDir === "number") ? l.curveDir : 1;
-        var cx = mx + nx * offset * dir;
-        var cy = my + ny * offset * dir;
-
-        elWire = document.createElementNS(NS, "path");
-        elWire.setAttribute("fill", "none");
-        elWire.setAttribute("d", "M " + p1.x + " " + p1.y + " Q " + cx + " " + cy + " " + p2.x + " " + p2.y);
-      } else {
-        elWire = document.createElementNS(NS, "line");
-        elWire.setAttribute("x1", p1.x);
-        elWire.setAttribute("y1", p1.y);
-        elWire.setAttribute("x2", p2.x);
-        elWire.setAttribute("y2", p2.y);
-      }
-
-      if (end === "arrow") {
-        elWire.setAttribute("marker-end", "url(#arrow)");
-      }
-
-      elWire.classList.add("linkLine");
-      elWire.dataset.linkid = l.id;
-      elWire.style.stroke = color;
-
-      if (l.id === selectedLinkId) elWire.classList.add("selected");
-
-      function handlePointerDown(e){
-        e.stopPropagation();
-        setLinkMode(false);
-        selectLink(l.id);
-        setStatus("Collegamento selezionato.");
-      }
-
-      function handleDblClick(e){
-        e.stopPropagation();
-        setLinkMode(false);
-        selectLink(l.id);
-
-        linkPreset = {
-          end: l.end || "arrow",
-          shape: l.shape || "straight",
-          curveDir: (typeof l.curveDir === "number") ? l.curveDir : 1
-        };
-
-        openLinkOptions(function(ok){
-          if (!ok) {
-            setStatus("Modifica collegamento annullata.");
-            return;
-          }
-          l.end = linkPreset.end;
-          l.shape = linkPreset.shape;
-          l.curveDir = linkPreset.curveDir;
-          renderLinks();
-          setStatus("Collegamento aggiornato.");
-        });
-      }
-
-      elWire.addEventListener("pointerdown", handlePointerDown);
-      elWire.addEventListener("dblclick", handleDblClick);
-
-      svg.appendChild(elWire);
-    });
-  }
-
   function render() {
-    var old = world.querySelectorAll(".pop");
-    for (var i=0;i<old.length;i++) old[i].remove();
+    world.innerHTML = "";
 
-    var ghost = board.querySelector(".ghost");
-    if (ghost) ghost.style.display = pops.length ? "none" : "flex";
-
-    pops.forEach(function (p) {
-      if (!p.color) p.color = "#000000";
-      if (!p.size) p.size = "small";
-      if (typeof p.bold === "undefined") p.bold = false;
-
+    pops.forEach(function(p){
       var el = document.createElement("div");
       el.className = "pop";
       el.dataset.id = p.id;
       el.style.left = p.x + "px";
       el.style.top  = p.y + "px";
-
       el.style.borderColor = p.color || "#000000";
 
-      el.innerHTML = '<textarea class="body" spellcheck="false"></textarea>';
-      var ta = el.querySelector(".body");
+      var ta = document.createElement("textarea");
+      ta.className = "body";
       ta.value = p.text || "";
+      ta.style.fontSize   = (p.size === "large" ? "20px" : "18px");
+      ta.style.fontWeight = p.bold ? "700" : "700";
+      ta.style.color      = p.color || "#000000";
+      ta.placeholder = "";
 
-      var fontSizePx = (p.size === "large") ? "20px" : "14px";
-      ta.style.fontSize = fontSizePx;
-      ta.style.fontWeight = p.bold ? "700" : "400";
-      ta.style.color = p.color || "#000000";
+      el.appendChild(ta);
 
       if (typeof p.height === "number" && p.height > 0) {
         ta.style.height = p.height + "px";
@@ -1095,14 +1085,23 @@
     setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
   }
 
-  function exportJSON() {
+  function exportJSON(customBaseName) {
     var blob = new Blob([JSON.stringify(getState(), null, 2)], { type: "application/json;charset=utf-8" });
-    var name = "mappa_" + new Date().toISOString().slice(0,19).split(":").join("-") + ".json";
-    downloadBlob(name, blob);
-    setStatus("Esportato JSON.");
+
+    var filename;
+    if (customBaseName && customBaseName.trim()) {
+      var base = customBaseName.trim();
+      if (!/\.(json)$/i.test(base)) base += ".json";
+      filename = base;
+    } else {
+      filename = "mappa_" + new Date().toISOString().slice(0,19).split(":").join("-") + ".json";
+    }
+
+    downloadBlob(filename, blob);
+    setStatus("Esportato JSON (" + filename + ").");
   }
 
-  function exportHTML() {
+  function exportHTML(customBaseName) {
     var state = JSON.stringify(getState(), null, 2);
 
     var html =
@@ -1115,7 +1114,7 @@
       '</head>' +
       '<body>' +
       '<h3>Mappa esportata</h3>' +
-      '<p>Importa questo file nell\'app con il pulsante Importa.</p>' +
+      '<p>Importa questo file nell\\'app con il pulsante Importa.</p>' +
       '<textarea id="popplet_export_data" style="display:none;">' +
       state +
       '</textarea>' +
@@ -1123,9 +1122,18 @@
       '</html>';
 
     var blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    var name = "mappa_" + new Date().toISOString().slice(0,19).replace(/:/g,'-') + ".html";
-    downloadBlob(name, blob);
-    setStatus("Esportato HTML.");
+
+    var filename;
+    if (customBaseName && customBaseName.trim()) {
+      var base = customBaseName.trim();
+      if (!/\.(html?|htm)$/i.test(base)) base += ".html";
+      filename = base;
+    } else {
+      filename = "mappa_" + new Date().toISOString().slice(0,19).replace(/:/g,'-') + ".html";
+    }
+
+    downloadBlob(filename, blob);
+    setStatus("Esportato HTML (" + filename + ").");
   }
   
   function parseImportedText(text) {
@@ -1202,11 +1210,97 @@
   });
 
   btnPdf.addEventListener("click", exportPDF);
-  btnExportJson.addEventListener("click", exportJSON);
-  btnExportHtml.addEventListener("click", exportHTML);
   btnImport.addEventListener("click", doImport);
   btnZoomIn.addEventListener("click", function(){ zoomAroundCenter(1.15); });
   btnZoomOut.addEventListener("click", function(){ zoomAroundCenter(1/1.15); });
+
+  // Apertura pannello Opzioni salvataggio (come file 45)
+  if (btnSaveOptions) {
+    btnSaveOptions.addEventListener("click", function(){
+      if (!saveOverlay) return;
+      if (saveFileNameInp) {
+        saveFileNameInp.value = lastSaveBaseName || "";
+      }
+      var radios = saveOverlay.querySelectorAll('input[name="saveFormat"]');
+      var current = lastSaveFormat || "json";
+      radios.forEach(function(r){ r.checked = (r.value === current); });
+      saveOverlay.style.display = "flex";
+      if (saveFileNameInp) {
+        setTimeout(function(){ saveFileNameInp.focus(); saveFileNameInp.select(); }, 50);
+      }
+    });
+  }
+
+  if (btnSaveCancel && saveOverlay) {
+    btnSaveCancel.addEventListener("click", function(){
+      saveOverlay.style.display = "none";
+    });
+  }
+
+  if (saveOverlay) {
+    saveOverlay.addEventListener("click", function(e){
+      if (e.target === saveOverlay) {
+        saveOverlay.style.display = "none";
+      }
+    });
+  }
+
+  if (btnSaveConfirm && saveOverlay) {
+    btnSaveConfirm.addEventListener("click", function(){
+      var baseName = (saveFileNameInp && saveFileNameInp.value.trim()) || "";
+      if (!baseName) baseName = "mappa_mentale";
+
+      var radios = saveOverlay.querySelectorAll('input[name="saveFormat"]');
+      var chosen = "json";
+      radios.forEach(function(r){ if (r.checked) chosen = r.value; });
+
+      lastSaveBaseName = baseName;
+      lastSaveFormat   = chosen;
+
+      if (chosen === "html") exportHTML(baseName);
+      else exportJSON(baseName);
+
+      saveOverlay.style.display = "none";
+    });
+  }
+
+  if (btnQuickSave) {
+    btnQuickSave.addEventListener("click", function(){
+      if (lastSaveBaseName) exportJSON(lastSaveBaseName);
+      else exportJSON(null);
+    });
+  }
+
+  // Collego i pulsanti flottanti alle stesse azioni dei bottoni originali
+  if (btnZoomIn_f) {
+    btnZoomIn_f.addEventListener("click", function(){
+      btnZoomIn.click();
+    });
+  }
+
+  if (btnZoomOut_f) {
+    btnZoomOut_f.addEventListener("click", function(){
+      btnZoomOut.click();
+    });
+  }
+
+  if (btnPan_f) {
+    btnPan_f.addEventListener("click", function(){
+      btnPan.click();
+    });
+  }
+
+  if (btnMove_f) {
+    btnMove_f.addEventListener("click", function(){
+      btnMove.click();
+    });
+  }
+
+  if (btnLink_f) {
+    btnLink_f.addEventListener("click", function(){
+      btnLink.click();
+    });
+  }
 
   txtColor.addEventListener("input", function(){
     if (!selectedBoxId) return;
@@ -1280,7 +1374,6 @@
     });
   });
 
-  /* Apertura/chiusura box "Comandi da tastiera" */
   btnKeyboardHelp.addEventListener("click", function(){
     kbdOverlay.style.display = "flex";
   });
